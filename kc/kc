@@ -1,0 +1,140 @@
+#!/bin/bash
+
+extension=( "java" "kt" )
+
+is_supported=""
+
+jar=""
+
+arguments=($*)
+
+current_dir=$(pwd)
+
+# check if file is supported or not
+
+for i in ${arguments[@]}
+do
+
+  if [[ $i == "jar" ]]
+  then
+    jar="$1.jar"
+    arguments=( "${arguments[@]/jar}" )
+    continue
+  fi
+
+  for j in ${extension[@]}
+  do
+  
+    if [[ $i == *".$j" ]]
+    then
+      if ! [[ $is_supported == "kt" ]] && ! [[ $is_supported == "jar" ]]
+      then
+        is_supported=$j
+      fi
+    fi
+  
+  done
+
+done
+
+# check if no argument is supplied
+
+if [[ ${#is_supported} -eq 0 ]]
+then
+  if [[ -z "$1" ]]
+  then
+    echo "file path not given"
+  else
+    echo "unsupported file"
+  fi
+  exit
+fi
+
+# check for compiler
+
+if [[ $is_supported == "kt" && -z $( type -P kotlinc ) ]]
+then
+  echo "kotlin compiler is required to compile this file"
+  exit
+elif [[ -z $( type -P javac ) ]]
+then
+  echo "java compiler is required to compile this file"
+  exit
+fi
+
+# make temporary directory
+
+temp=""
+
+if [[ -d /dev/shm/ ]]
+then
+  mkdir /dev/shm/kc_temp
+  temp="/dev/shm/kc_temp"
+else
+  mkdir kc_temp
+  temp="$current_dir/kc_temp"
+fi
+
+# compile the file
+
+if [[ $is_supported == "kt" ]]
+then
+  kotlinc ${arguments[@]} -d "$temp/$jar"
+elif [[ -z $jar ]]
+then
+  javac ${arguments[@]} -d $temp
+else
+  javac cf jar-file ${arguments[@]} -d /dev/shm/kc_temp
+fi
+
+# remove meta-inf folder
+
+if [[ -d "$temp/META-INF" ]]
+then
+  rm -r "$temp/META-INF"
+fi
+
+# make executable
+
+mainFile=$( ls $temp | grep -i $( basename -s .java $(basename -s .kt $1) ) )
+
+echo -e "#!/bin/bash
+TYPE=$is_supported
+sourceName=$mainFile
+compiledFile=\$(basename \${BASH_SOURCE})
+current_dir=\$(pwd)
+temp=\"\"
+if [[ -d /dev/shm ]]
+then
+  mkdir /dev/shm/kc_temp
+  temp=\"/dev/shm/kc_temp\"
+else
+  mkdir \"\$current_dir/kc_temp\"
+  temp=\"\$current_dir/kc_temp\"
+fi
+sed -e '1,30d' \${BASH_SOURCE[0]} > \$temp/\$sourceName
+head -30 \${BASH_SOURCE[0]} > \$temp/script
+cd \$temp
+sha256sum \$sourceName > checksum
+if [[ \$TYPE == \"kt\" ]]
+then
+  kotlin \$sourceName \$*
+else
+  java \$(basename -s .class \$sourceName) \$*
+fi
+if ! [[ \$( sha256sum \$sourceName ) == \$( cat checksum ) ]]
+then
+  (cat \$temp/script | cat - \$temp/\$sourceName) > \$current_dir/\$compiledFile
+fi
+rm -r \$temp
+exit" | cat - "$temp/$mainFile" > "$current_dir/$( basename -s .kt $( basename -s .java $( basename -s .class $( basename -s .jar $mainFile ) ) ) )"
+
+chmod +x "$current_dir/$( basename -s .kt $( basename -s .java $( basename -s .class $( basename -s .jar $mainFile ) ) ) )"
+
+rm "$temp/$mainFile"
+
+cp -r $temp/. $current_dir
+
+rm -r $temp
+
+exit
