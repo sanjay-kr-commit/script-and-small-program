@@ -68,6 +68,9 @@ temp=""
 
 if [[ -d /dev/shm/ ]]
 then
+  if [[ -d /dev/shm/kc_temp ]] ; then
+    rm -r /dev/shm/kc_temp 
+  fi
   mkdir /dev/shm/kc_temp
   temp="/dev/shm/kc_temp"
 else
@@ -100,20 +103,37 @@ mainFile=$( ls $temp | grep -i $( basename -s .java $(basename -s .kt $1) ) )
 
 echo -e "#!/bin/bash
 TYPE=$is_supported
+if [[ \$TYPE == \"kt\" ]] ; then
+  if [[ \$(which kotlin) == \"\" ]] ; then
+    echo \"Kotlin Runtime Not Found, Kotlin Runtime is required in order to execute this file\"
+    exit
+  fi
+fi
+if [[ \$(which java) == \"\" ]] ; then
+  if [[ \$TYPE == \"kt\" ]] ; then
+    echo \"Kotlin Runtime Requires Java Runtime in order to execute this file\"
+  else
+    echo \"Java Runtime Not Found, Java Runtime is required in order to run this file\"
+  fi
+  exit
+fi
 sourceName=$mainFile
 compiledFile=\$(basename \${BASH_SOURCE})
 current_dir=\$(pwd)
 temp=\"\"
 if [[ -d /dev/shm ]]
 then
+  if [[ -d /dev/shm/kc_temp ]] ; then
+    rm -r /dev/shm/kc_temp 
+  fi
   mkdir /dev/shm/kc_temp
   temp=\"/dev/shm/kc_temp\"
 else
   mkdir \"\$current_dir/kc_temp\"
   temp=\"\$current_dir/kc_temp\"
 fi
-sed -e '1,30d' \${BASH_SOURCE[0]} > \$temp/\$sourceName
-head -30 \${BASH_SOURCE[0]} > \$temp/script
+sed -e '1,47d' \${BASH_SOURCE[0]} > \$temp/\$sourceName
+head -48 \${BASH_SOURCE[0]} > \$temp/script
 cd \$temp
 sha256sum \$sourceName > checksum
 if [[ \$TYPE == \"kt\" ]]
@@ -131,10 +151,10 @@ exit" | cat - "$temp/$mainFile" > "$current_dir/$( basename -s .kt $( basename -
 
 chmod +x "$current_dir/$( basename -s .kt $( basename -s .java $( basename -s .class $( basename -s .jar $mainFile ) ) ) )"
 
-rm "$temp/$mainFile"
+#rm "$temp/$mainFile"
 
 cp -r $temp/. $current_dir
 
-rm -r $temp
+#rm -r $temp
 
 exit
