@@ -11,7 +11,7 @@ arguments=($*)
 current_dir=$(pwd)
 
 # check if file is supported or not
-
+echo "checking for supported files"
 for i in ${arguments[@]}
 do
 
@@ -51,7 +51,7 @@ then
 fi
 
 # check for compiler
-
+echo "looking for compiler"
 if [[ $is_supported == "kt" && -z $( type -P kotlinc ) ]]
 then
   echo "kotlin compiler is required to compile this file"
@@ -63,9 +63,8 @@ then
 fi
 
 # make temporary directory
-
+echo "creating cache directory"
 temp=""
-
 if [[ -d /dev/shm/ ]]
 then
   if [[ -d /dev/shm/kc_temp ]] ; then
@@ -79,7 +78,7 @@ else
 fi
 
 # compile the file
-
+echo "compiling program files"
 if [[ $is_supported == "kt" ]]
 then
   kotlinc ${arguments[@]} -d "$temp/$jar"
@@ -91,9 +90,9 @@ else
 fi
 
 # remove meta-inf folder
-
 if [[ -d "$temp/META-INF" ]]
 then
+  echo "deleting meta data file"
   rm -r "$temp/META-INF"
 fi
 
@@ -101,6 +100,7 @@ fi
 
 mainFile=$( ls $temp | grep -i $( basename -s .java $(basename -s .kt $1) ) )
 
+echo "injecting startup script into compiled file"
 echo -e "#!/bin/bash
 TYPE=$is_supported
 if [[ \$TYPE == \"kt\" ]] ; then
@@ -150,11 +150,8 @@ rm -r \$temp
 exit" | cat - "$temp/$mainFile" > "$current_dir/$( basename -s .kt $( basename -s .java $( basename -s .class $( basename -s .jar $mainFile ) ) ) )"
 
 chmod +x "$current_dir/$( basename -s .kt $( basename -s .java $( basename -s .class $( basename -s .jar $mainFile ) ) ) )"
-
-#rm "$temp/$mainFile"
-
+rm "$temp/$mainFile"
 cp -r $temp/. $current_dir
+rm -r $temp
 
-#rm -r $temp
-
-exit
+echo "done"
