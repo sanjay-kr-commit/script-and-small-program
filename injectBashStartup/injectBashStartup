@@ -135,14 +135,14 @@ fi
 sed -e '1,47d' \${BASH_SOURCE[0]} > \$temp/\$sourceName
 head -48 \${BASH_SOURCE[0]} > \$temp/script
 cd \$temp
-sha256sum \$sourceName > checksum
+previousChecksum=\$(sha256sum \$sourceName)
 if [[ \$TYPE == \"kt\" ]]
 then
   kotlin \$sourceName \$*
 else
   java \$(basename -s .class \$sourceName) \$*
 fi
-if ! [[ \$( sha256sum \$sourceName ) == \$( cat checksum ) ]]
+if ! [[ \$( sha256sum \$sourceName ) == \$previousChecksum ]]
 then
   (cat \$temp/script | cat - \$temp/\$sourceName) > \$current_dir/\$compiledFile
 fi
