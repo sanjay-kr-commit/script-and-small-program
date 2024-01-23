@@ -154,6 +154,7 @@ tailrec fun String.evaluateExpression() : String = when {
 }
 
 fun String.parseExpression() : String {
+
     val validatedExpression = StringBuilder( validateExpression() )
 
     val bracketFirstOperation : ( Char , Char ) -> Unit = { openBracket : Char, closeBracket : Char ->
@@ -164,9 +165,33 @@ fun String.parseExpression() : String {
         }
     }
 
-    bracketFirstOperation( '(' , ')' )
-    bracketFirstOperation( '[' , ']' )
-    bracketFirstOperation( '{' , '}' )
+    val maxOfThree : ( Int , Int , Int ) -> Int = { num1 , num2 , num3 ->
+        if ( num1 > num2 ) {
+            if ( num1 > num3 ) 1 else 3
+        } else{
+            if ( num2 > num3 ) 2 else 3
+        }
+
+    }
+
+    val bracketIsAvailable = IntArray( 3 )
+
+    bracketIsAvailable[0] = validatedExpression.lastIndexOf( "(" )
+    bracketIsAvailable[1] = validatedExpression.lastIndexOf( "[" )
+    bracketIsAvailable[2] = validatedExpression.lastIndexOf( "{" )
+    var max = maxOfThree( bracketIsAvailable[0] , bracketIsAvailable[1] , bracketIsAvailable[2] )
+
+    while ( bracketIsAvailable[max-1] > -1 ) {
+        when ( max ) {
+            1 -> bracketFirstOperation( '(' , ')' )
+            2 -> bracketFirstOperation( '[' , ']' )
+            else -> bracketFirstOperation( '{' , '}' )
+        }
+        bracketIsAvailable[0] = validatedExpression.lastIndexOf( "(" )
+        bracketIsAvailable[1] = validatedExpression.lastIndexOf( "[" )
+        bracketIsAvailable[2] = validatedExpression.lastIndexOf( "{" )
+        max = maxOfThree( bracketIsAvailable[0] , bracketIsAvailable[1] , bracketIsAvailable[2] )
+    }
 
     return validatedExpression.toString().evaluateExpression()
 }
