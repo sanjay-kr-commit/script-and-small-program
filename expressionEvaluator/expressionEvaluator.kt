@@ -157,12 +157,10 @@ fun String.parseExpression() : String {
 
     val validatedExpression = StringBuilder( validateExpression() )
 
-    val bracketFirstOperation : ( Char , Char ) -> Unit = { openBracket : Char, closeBracket : Char ->
-        while ( validatedExpression.contains( openBracket ) ) {
-            val openBracketIndex = validatedExpression.lastIndexOf( openBracket )
-            val closeBracketIndex = openBracketIndex + validatedExpression.substring( openBracketIndex + 1 ).indexOf( closeBracket )
-            validatedExpression.replace( openBracketIndex , closeBracketIndex+2 , validatedExpression.substring( openBracketIndex+1 , closeBracketIndex+1 ).evaluateExpression() )
-        }
+    val parseBracketExpression : (Char, Char ) -> Unit = { openBracket : Char, closeBracket : Char ->
+        val openBracketIndex = validatedExpression.lastIndexOf( openBracket )
+        val closeBracketIndex = openBracketIndex + validatedExpression.substring( openBracketIndex + 1 ).indexOf( closeBracket )
+        validatedExpression.replace( openBracketIndex , closeBracketIndex+2 , validatedExpression.substring( openBracketIndex+1 , closeBracketIndex+1 ).evaluateExpression() )
     }
 
     val maxOfThree : ( Int , Int , Int ) -> Int = { num1 , num2 , num3 ->
@@ -183,9 +181,9 @@ fun String.parseExpression() : String {
 
     while ( bracketIsAvailable[max-1] > -1 ) {
         when ( max ) {
-            1 -> bracketFirstOperation( '(' , ')' )
-            2 -> bracketFirstOperation( '[' , ']' )
-            else -> bracketFirstOperation( '{' , '}' )
+            1 -> parseBracketExpression( '(' , ')' )
+            2 -> parseBracketExpression( '[' , ']' )
+            else -> parseBracketExpression( '{' , '}' )
         }
         bracketIsAvailable[0] = validatedExpression.lastIndexOf( "(" )
         bracketIsAvailable[1] = validatedExpression.lastIndexOf( "[" )
@@ -204,7 +202,9 @@ fun main( args : Array<String> ) {
             try {
                 println( "$exp : ${ exp.parseExpression() }" )
                 count++ ;
-            } catch ( _ : Exception ) {}
+            } catch ( e : Exception ) {
+                println( "$exp : $e" )
+            }
         }
         if ( count > 0 ) return
     }
