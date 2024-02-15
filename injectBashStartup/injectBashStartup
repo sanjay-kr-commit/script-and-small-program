@@ -44,6 +44,40 @@ then
   if [[ -z "$1" ]]
   then
     echo "file path not given"
+  elif [[ $i == *".jar" ]]
+  then
+    echo "$1"
+    echo -e "#!/bin/bash
+    sourceName=main.jar
+    if [[ \$(which java) == \"\" ]] ; then
+      echo \"Java Runtime Not Found, Java Runtime is required in order to run this file\"
+      exit
+    fi
+    current_dir=\$(pwd)
+    temp=\"\"
+    if [[ -d /dev/shm ]]
+    then
+      if [[ -d /dev/shm/kc_temp ]] ; then
+        rm -r /dev/shm/kc_temp 
+      fi
+      mkdir /dev/shm/kc_temp
+      temp=\"/dev/shm/kc_temp\"
+    else
+      mkdir \"\$current_dir/kc_temp\"
+      temp=\"\$current_dir/kc_temp\"
+    fi
+    sed -e '1,30d' \${BASH_SOURCE[0]} > \$temp/\$sourceName
+    head -31 \${BASH_SOURCE[0]} > \$temp/script
+    cd \$temp
+    previousChecksum=\$(sha256sum \$sourceName)
+    java -jar \$sourceName \$*
+    if ! [[ \$( sha256sum \$sourceName ) == \$previousChecksum ]]
+    then
+      (cat \$temp/script | cat - \$temp/\$sourceName) > \$current_dir/\$compiledFile
+    fi
+    rm -r \$temp
+    exit" | cat - "$1" > "$1.sh"
+    chmod +x "$1.sh"
   else
     echo "unsupported file"
   fi
